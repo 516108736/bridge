@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 	"log"
 	"math"
 	"math/big"
@@ -13,6 +14,10 @@ import (
 	token "github.com/516108736/bridge/erc_token"
 )
 
+var (
+	wei = new(big.Int).Mul(new(big.Int).SetUint64(1000000000), new(big.Int).SetUint64(1000000000))
+)
+
 func main() {
 	client, err := ethclient.Dial("wss://ropsten.infura.io/ws/v3/5f85acad140a4286858886f080177bc9")
 	//client, err := ethclient.Dial("wss://mainnet.infura.io/ws/v3/5f85acad140a4286858886f080177bc9")
@@ -20,9 +25,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Golem (GNT) Address
-	tokenAddress := common.HexToAddress("0x41c03a056b7cb9333780ee9891dab0ccfceecfa0")
-	instance, err := token.NewToken(tokenAddress, client)
+	tokenAddress := common.HexToAddress("0x299744722e0c80a23F1c0f48e712317cB89663f2")
+	instance, err := token.NewErcToken(tokenAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,5 +64,13 @@ func main() {
 
 	fmt.Printf("balance: %f", value) // "balance: 74605500.647409"
 
-	instance.Name()
+	pr, err := crypto.ToECDSA(common.FromHex("0x82283e556e0d8cae13dc13a691c6a1cdc67ccd68216a14ae8e79ddd909d08a74"))
+
+	addr := crypto.PubkeyToAddress(pr.PublicKey)
+	fmt.Println("addr", addr.String())
+
+	auth := bind.NewKeyedTransactor(pr)
+	tx, err := instance.Mint(auth, common.HexToAddress("0x5ea7b25C1Ffa0F1905078D06fD4875221bbc6863"), new(big.Int).Mul(new(big.Int).SetInt64(666), wei))
+	//fmt.Println("a", a.Hash().String())
+	fmt.Println("err", tx.Hash().String(), err)
 }
