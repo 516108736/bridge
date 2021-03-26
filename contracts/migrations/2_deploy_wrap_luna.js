@@ -1,5 +1,5 @@
-const WrappedLuna = artifacts.require("WrappedLuna");
+const scfToken = artifacts.require("ScfToken");
 
 module.exports = function (deployer) {
-  deployer.deploy(WrappedLuna);
+  deployer.deploy(scfToken);
 };
