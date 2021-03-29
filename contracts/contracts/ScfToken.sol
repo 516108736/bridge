@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract WrappedToken is ERC20, Ownable {
     event Burn(address indexed _sender, bytes32 indexed _to, uint256 amount);
-    
+
     constructor(string memory name, string memory symbol)
     public
     ERC20(name, symbol)
@@ -23,7 +23,7 @@ contract WrappedToken is ERC20, Ownable {
 }
 
 contract SCFToken is WrappedToken {
-    constructor() public WrappedToken("SCF222", "scf222") {
+    constructor() public WrappedToken("SCF333", "scf333") {
 
     }
 }
