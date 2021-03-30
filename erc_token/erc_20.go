@@ -20,6 +20,7 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
+	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -137,7 +138,7 @@ func bindErcToken(address common.Address, caller bind.ContractCaller, transactor
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ErcToken *ErcTokenRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+func (_ErcToken *ErcTokenRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
 	return _ErcToken.Contract.ErcTokenCaller.contract.Call(opts, result, method, params...)
 }
 
@@ -156,7 +157,7 @@ func (_ErcToken *ErcTokenRaw) Transact(opts *bind.TransactOpts, method string, p
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ErcToken *ErcTokenCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+func (_ErcToken *ErcTokenCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
 	return _ErcToken.Contract.contract.Call(opts, result, method, params...)
 }
 
@@ -173,322 +174,287 @@ func (_ErcToken *ErcTokenTransactorRaw) Transact(opts *bind.TransactOpts, method
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) view returns(uint256)
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
 func (_ErcToken *ErcTokenCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "allowance", owner, spender)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "allowance", owner, spender)
+	return *ret0, err
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) view returns(uint256)
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
 func (_ErcToken *ErcTokenSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
 	return _ErcToken.Contract.Allowance(&_ErcToken.CallOpts, owner, spender)
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
 //
-// Solidity: function allowance(address owner, address spender) view returns(uint256)
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
 func (_ErcToken *ErcTokenCallerSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
 	return _ErcToken.Contract.Allowance(&_ErcToken.CallOpts, owner, spender)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) view returns(uint256)
+// Solidity: function balanceOf(account address) constant returns(uint256)
 func (_ErcToken *ErcTokenCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "balanceOf", account)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "balanceOf", account)
+	return *ret0, err
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) view returns(uint256)
+// Solidity: function balanceOf(account address) constant returns(uint256)
 func (_ErcToken *ErcTokenSession) BalanceOf(account common.Address) (*big.Int, error) {
 	return _ErcToken.Contract.BalanceOf(&_ErcToken.CallOpts, account)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(address account) view returns(uint256)
+// Solidity: function balanceOf(account address) constant returns(uint256)
 func (_ErcToken *ErcTokenCallerSession) BalanceOf(account common.Address) (*big.Int, error) {
 	return _ErcToken.Contract.BalanceOf(&_ErcToken.CallOpts, account)
 }
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
 //
-// Solidity: function decimals() view returns(uint8)
+// Solidity: function decimals() constant returns(uint8)
 func (_ErcToken *ErcTokenCaller) Decimals(opts *bind.CallOpts) (uint8, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "decimals")
-
-	if err != nil {
-		return *new(uint8), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
-
-	return out0, err
-
+	var (
+		ret0 = new(uint8)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "decimals")
+	return *ret0, err
 }
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
 //
-// Solidity: function decimals() view returns(uint8)
+// Solidity: function decimals() constant returns(uint8)
 func (_ErcToken *ErcTokenSession) Decimals() (uint8, error) {
 	return _ErcToken.Contract.Decimals(&_ErcToken.CallOpts)
 }
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
 //
-// Solidity: function decimals() view returns(uint8)
+// Solidity: function decimals() constant returns(uint8)
 func (_ErcToken *ErcTokenCallerSession) Decimals() (uint8, error) {
 	return _ErcToken.Contract.Decimals(&_ErcToken.CallOpts)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
-// Solidity: function name() view returns(string)
+// Solidity: function name() constant returns(string)
 func (_ErcToken *ErcTokenCaller) Name(opts *bind.CallOpts) (string, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "name")
-
-	if err != nil {
-		return *new(string), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(string)).(*string)
-
-	return out0, err
-
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "name")
+	return *ret0, err
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
-// Solidity: function name() view returns(string)
+// Solidity: function name() constant returns(string)
 func (_ErcToken *ErcTokenSession) Name() (string, error) {
 	return _ErcToken.Contract.Name(&_ErcToken.CallOpts)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
-// Solidity: function name() view returns(string)
+// Solidity: function name() constant returns(string)
 func (_ErcToken *ErcTokenCallerSession) Name() (string, error) {
 	return _ErcToken.Contract.Name(&_ErcToken.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
-// Solidity: function owner() view returns(address)
+// Solidity: function owner() constant returns(address)
 func (_ErcToken *ErcTokenCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "owner")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "owner")
+	return *ret0, err
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
-// Solidity: function owner() view returns(address)
+// Solidity: function owner() constant returns(address)
 func (_ErcToken *ErcTokenSession) Owner() (common.Address, error) {
 	return _ErcToken.Contract.Owner(&_ErcToken.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
-// Solidity: function owner() view returns(address)
+// Solidity: function owner() constant returns(address)
 func (_ErcToken *ErcTokenCallerSession) Owner() (common.Address, error) {
 	return _ErcToken.Contract.Owner(&_ErcToken.CallOpts)
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
 //
-// Solidity: function symbol() view returns(string)
+// Solidity: function symbol() constant returns(string)
 func (_ErcToken *ErcTokenCaller) Symbol(opts *bind.CallOpts) (string, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "symbol")
-
-	if err != nil {
-		return *new(string), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(string)).(*string)
-
-	return out0, err
-
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "symbol")
+	return *ret0, err
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
 //
-// Solidity: function symbol() view returns(string)
+// Solidity: function symbol() constant returns(string)
 func (_ErcToken *ErcTokenSession) Symbol() (string, error) {
 	return _ErcToken.Contract.Symbol(&_ErcToken.CallOpts)
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
 //
-// Solidity: function symbol() view returns(string)
+// Solidity: function symbol() constant returns(string)
 func (_ErcToken *ErcTokenCallerSession) Symbol() (string, error) {
 	return _ErcToken.Contract.Symbol(&_ErcToken.CallOpts)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() view returns(uint256)
+// Solidity: function totalSupply() constant returns(uint256)
 func (_ErcToken *ErcTokenCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _ErcToken.contract.Call(opts, &out, "totalSupply")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ErcToken.contract.Call(opts, out, "totalSupply")
+	return *ret0, err
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() view returns(uint256)
+// Solidity: function totalSupply() constant returns(uint256)
 func (_ErcToken *ErcTokenSession) TotalSupply() (*big.Int, error) {
 	return _ErcToken.Contract.TotalSupply(&_ErcToken.CallOpts)
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
 //
-// Solidity: function totalSupply() view returns(uint256)
+// Solidity: function totalSupply() constant returns(uint256)
 func (_ErcToken *ErcTokenCallerSession) TotalSupply() (*big.Int, error) {
 	return _ErcToken.Contract.TotalSupply(&_ErcToken.CallOpts)
 }
 
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
 //
-// Solidity: function approve(address spender, uint256 amount) returns(bool)
+// Solidity: function approve(spender address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactor) Approve(opts *bind.TransactOpts, spender common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "approve", spender, amount)
 }
 
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
 //
-// Solidity: function approve(address spender, uint256 amount) returns(bool)
+// Solidity: function approve(spender address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenSession) Approve(spender common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.Approve(&_ErcToken.TransactOpts, spender, amount)
 }
 
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
 //
-// Solidity: function approve(address spender, uint256 amount) returns(bool)
+// Solidity: function approve(spender address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactorSession) Approve(spender common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.Approve(&_ErcToken.TransactOpts, spender, amount)
 }
 
 // Burn is a paid mutator transaction binding the contract method 0xbcf64e05.
 //
-// Solidity: function burn(uint256 amount, bytes32 to) returns()
+// Solidity: function burn(amount uint256, to bytes32) returns()
 func (_ErcToken *ErcTokenTransactor) Burn(opts *bind.TransactOpts, amount *big.Int, to [32]byte) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "burn", amount, to)
 }
 
 // Burn is a paid mutator transaction binding the contract method 0xbcf64e05.
 //
-// Solidity: function burn(uint256 amount, bytes32 to) returns()
+// Solidity: function burn(amount uint256, to bytes32) returns()
 func (_ErcToken *ErcTokenSession) Burn(amount *big.Int, to [32]byte) (*types.Transaction, error) {
 	return _ErcToken.Contract.Burn(&_ErcToken.TransactOpts, amount, to)
 }
 
 // Burn is a paid mutator transaction binding the contract method 0xbcf64e05.
 //
-// Solidity: function burn(uint256 amount, bytes32 to) returns()
+// Solidity: function burn(amount uint256, to bytes32) returns()
 func (_ErcToken *ErcTokenTransactorSession) Burn(amount *big.Int, to [32]byte) (*types.Transaction, error) {
 	return _ErcToken.Contract.Burn(&_ErcToken.TransactOpts, amount, to)
 }
 
 // DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
 //
-// Solidity: function decreaseAllowance(address spender, uint256 subtractedValue) returns(bool)
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactor) DecreaseAllowance(opts *bind.TransactOpts, spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "decreaseAllowance", spender, subtractedValue)
 }
 
 // DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
 //
-// Solidity: function decreaseAllowance(address spender, uint256 subtractedValue) returns(bool)
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
 func (_ErcToken *ErcTokenSession) DecreaseAllowance(spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.DecreaseAllowance(&_ErcToken.TransactOpts, spender, subtractedValue)
 }
 
 // DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
 //
-// Solidity: function decreaseAllowance(address spender, uint256 subtractedValue) returns(bool)
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactorSession) DecreaseAllowance(spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.DecreaseAllowance(&_ErcToken.TransactOpts, spender, subtractedValue)
 }
 
 // IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
 //
-// Solidity: function increaseAllowance(address spender, uint256 addedValue) returns(bool)
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactor) IncreaseAllowance(opts *bind.TransactOpts, spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "increaseAllowance", spender, addedValue)
 }
 
 // IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
 //
-// Solidity: function increaseAllowance(address spender, uint256 addedValue) returns(bool)
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
 func (_ErcToken *ErcTokenSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.IncreaseAllowance(&_ErcToken.TransactOpts, spender, addedValue)
 }
 
 // IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
 //
-// Solidity: function increaseAllowance(address spender, uint256 addedValue) returns(bool)
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactorSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.IncreaseAllowance(&_ErcToken.TransactOpts, spender, addedValue)
 }
 
 // Mint is a paid mutator transaction binding the contract method 0x40c10f19.
 //
-// Solidity: function mint(address account, uint256 amount) returns()
+// Solidity: function mint(account address, amount uint256) returns()
 func (_ErcToken *ErcTokenTransactor) Mint(opts *bind.TransactOpts, account common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "mint", account, amount)
 }
 
 // Mint is a paid mutator transaction binding the contract method 0x40c10f19.
 //
-// Solidity: function mint(address account, uint256 amount) returns()
+// Solidity: function mint(account address, amount uint256) returns()
 func (_ErcToken *ErcTokenSession) Mint(account common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.Mint(&_ErcToken.TransactOpts, account, amount)
 }
 
 // Mint is a paid mutator transaction binding the contract method 0x40c10f19.
 //
-// Solidity: function mint(address account, uint256 amount) returns()
+// Solidity: function mint(account address, amount uint256) returns()
 func (_ErcToken *ErcTokenTransactorSession) Mint(account common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.Mint(&_ErcToken.TransactOpts, account, amount)
 }
@@ -516,63 +482,63 @@ func (_ErcToken *ErcTokenTransactorSession) RenounceOwnership() (*types.Transact
 
 // Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
 //
-// Solidity: function transfer(address recipient, uint256 amount) returns(bool)
+// Solidity: function transfer(recipient address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactor) Transfer(opts *bind.TransactOpts, recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "transfer", recipient, amount)
 }
 
 // Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
 //
-// Solidity: function transfer(address recipient, uint256 amount) returns(bool)
+// Solidity: function transfer(recipient address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenSession) Transfer(recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.Transfer(&_ErcToken.TransactOpts, recipient, amount)
 }
 
 // Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
 //
-// Solidity: function transfer(address recipient, uint256 amount) returns(bool)
+// Solidity: function transfer(recipient address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactorSession) Transfer(recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.Transfer(&_ErcToken.TransactOpts, recipient, amount)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
 //
-// Solidity: function transferFrom(address sender, address recipient, uint256 amount) returns(bool)
+// Solidity: function transferFrom(sender address, recipient address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactor) TransferFrom(opts *bind.TransactOpts, sender common.Address, recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "transferFrom", sender, recipient, amount)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
 //
-// Solidity: function transferFrom(address sender, address recipient, uint256 amount) returns(bool)
+// Solidity: function transferFrom(sender address, recipient address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenSession) TransferFrom(sender common.Address, recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.TransferFrom(&_ErcToken.TransactOpts, sender, recipient, amount)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
 //
-// Solidity: function transferFrom(address sender, address recipient, uint256 amount) returns(bool)
+// Solidity: function transferFrom(sender address, recipient address, amount uint256) returns(bool)
 func (_ErcToken *ErcTokenTransactorSession) TransferFrom(sender common.Address, recipient common.Address, amount *big.Int) (*types.Transaction, error) {
 	return _ErcToken.Contract.TransferFrom(&_ErcToken.TransactOpts, sender, recipient, amount)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
+// Solidity: function transferOwnership(newOwner address) returns()
 func (_ErcToken *ErcTokenTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
 	return _ErcToken.contract.Transact(opts, "transferOwnership", newOwner)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
+// Solidity: function transferOwnership(newOwner address) returns()
 func (_ErcToken *ErcTokenSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
 	return _ErcToken.Contract.TransferOwnership(&_ErcToken.TransactOpts, newOwner)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
+// Solidity: function transferOwnership(newOwner address) returns()
 func (_ErcToken *ErcTokenTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
 	return _ErcToken.Contract.TransferOwnership(&_ErcToken.TransactOpts, newOwner)
 }
@@ -654,7 +620,7 @@ type ErcTokenApproval struct {
 
 // FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
 //
-// Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
+// Solidity: e Approval(owner indexed address, spender indexed address, value uint256)
 func (_ErcToken *ErcTokenFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ErcTokenApprovalIterator, error) {
 
 	var ownerRule []interface{}
@@ -675,7 +641,7 @@ func (_ErcToken *ErcTokenFilterer) FilterApproval(opts *bind.FilterOpts, owner [
 
 // WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
 //
-// Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
+// Solidity: e Approval(owner indexed address, spender indexed address, value uint256)
 func (_ErcToken *ErcTokenFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ErcTokenApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
 
 	var ownerRule []interface{}
@@ -717,18 +683,6 @@ func (_ErcToken *ErcTokenFilterer) WatchApproval(opts *bind.WatchOpts, sink chan
 			}
 		}
 	}), nil
-}
-
-// ParseApproval is a log parse operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
-//
-// Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
-func (_ErcToken *ErcTokenFilterer) ParseApproval(log types.Log) (*ErcTokenApproval, error) {
-	event := new(ErcTokenApproval)
-	if err := _ErcToken.contract.UnpackLog(event, "Approval", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // ErcTokenBurnIterator is returned from FilterBurn and is used to iterate over the raw logs and unpacked data for Burn events raised by the ErcToken contract.
@@ -808,7 +762,7 @@ type ErcTokenBurn struct {
 
 // FilterBurn is a free log retrieval operation binding the contract event 0xc3599666213715dfabdf658c56a97b9adfad2cd9689690c70c79b20bc61940c9.
 //
-// Solidity: event Burn(address indexed _sender, bytes32 indexed _to, uint256 amount)
+// Solidity: e Burn(_sender indexed address, _to indexed bytes32, amount uint256)
 func (_ErcToken *ErcTokenFilterer) FilterBurn(opts *bind.FilterOpts, _sender []common.Address, _to [][32]byte) (*ErcTokenBurnIterator, error) {
 
 	var _senderRule []interface{}
@@ -829,7 +783,7 @@ func (_ErcToken *ErcTokenFilterer) FilterBurn(opts *bind.FilterOpts, _sender []c
 
 // WatchBurn is a free log subscription operation binding the contract event 0xc3599666213715dfabdf658c56a97b9adfad2cd9689690c70c79b20bc61940c9.
 //
-// Solidity: event Burn(address indexed _sender, bytes32 indexed _to, uint256 amount)
+// Solidity: e Burn(_sender indexed address, _to indexed bytes32, amount uint256)
 func (_ErcToken *ErcTokenFilterer) WatchBurn(opts *bind.WatchOpts, sink chan<- *ErcTokenBurn, _sender []common.Address, _to [][32]byte) (event.Subscription, error) {
 
 	var _senderRule []interface{}
@@ -871,18 +825,6 @@ func (_ErcToken *ErcTokenFilterer) WatchBurn(opts *bind.WatchOpts, sink chan<- *
 			}
 		}
 	}), nil
-}
-
-// ParseBurn is a log parse operation binding the contract event 0xc3599666213715dfabdf658c56a97b9adfad2cd9689690c70c79b20bc61940c9.
-//
-// Solidity: event Burn(address indexed _sender, bytes32 indexed _to, uint256 amount)
-func (_ErcToken *ErcTokenFilterer) ParseBurn(log types.Log) (*ErcTokenBurn, error) {
-	event := new(ErcTokenBurn)
-	if err := _ErcToken.contract.UnpackLog(event, "Burn", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // ErcTokenOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the ErcToken contract.
@@ -961,7 +903,7 @@ type ErcTokenOwnershipTransferred struct {
 
 // FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
 //
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+// Solidity: e OwnershipTransferred(previousOwner indexed address, newOwner indexed address)
 func (_ErcToken *ErcTokenFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ErcTokenOwnershipTransferredIterator, error) {
 
 	var previousOwnerRule []interface{}
@@ -982,7 +924,7 @@ func (_ErcToken *ErcTokenFilterer) FilterOwnershipTransferred(opts *bind.FilterO
 
 // WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
 //
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+// Solidity: e OwnershipTransferred(previousOwner indexed address, newOwner indexed address)
 func (_ErcToken *ErcTokenFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ErcTokenOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
 
 	var previousOwnerRule []interface{}
@@ -1024,18 +966,6 @@ func (_ErcToken *ErcTokenFilterer) WatchOwnershipTransferred(opts *bind.WatchOpt
 			}
 		}
 	}), nil
-}
-
-// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_ErcToken *ErcTokenFilterer) ParseOwnershipTransferred(log types.Log) (*ErcTokenOwnershipTransferred, error) {
-	event := new(ErcTokenOwnershipTransferred)
-	if err := _ErcToken.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // ErcTokenTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ErcToken contract.
@@ -1115,7 +1045,7 @@ type ErcTokenTransfer struct {
 
 // FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
 //
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
+// Solidity: e Transfer(from indexed address, to indexed address, value uint256)
 func (_ErcToken *ErcTokenFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ErcTokenTransferIterator, error) {
 
 	var fromRule []interface{}
@@ -1136,7 +1066,7 @@ func (_ErcToken *ErcTokenFilterer) FilterTransfer(opts *bind.FilterOpts, from []
 
 // WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
 //
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
+// Solidity: e Transfer(from indexed address, to indexed address, value uint256)
 func (_ErcToken *ErcTokenFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ErcTokenTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
 
 	var fromRule []interface{}
@@ -1178,16 +1108,4 @@ func (_ErcToken *ErcTokenFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan
 			}
 		}
 	}), nil
-}
-
-// ParseTransfer is a log parse operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
-//
-// Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
-func (_ErcToken *ErcTokenFilterer) ParseTransfer(log types.Log) (*ErcTokenTransfer, error) {
-	event := new(ErcTokenTransfer)
-	if err := _ErcToken.contract.UnpackLog(event, "Transfer", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
