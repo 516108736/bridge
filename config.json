@@ -4,7 +4,8 @@
   "ETHContract": ["0xF26123bec47D6f1735b41330A4277121295F1523"],
   "QKCNativeContract": [1776101941],
   "ETHSpecialAddress": "0x9317D5F30ff07ff091b2cC6fA170Ca418ca14380",
-  "ETHConfirmationBlock": 7,
+  "ETHConfirmationBlock": 2,
+  "QKCConfirmationBlock": 2,
   "FeeRate": "1/1000",
   "QKCPrivateAddress": "82283e556e0d8cae13dc13a691c6a1cdc67ccd68216a14ae8e79ddd909d08a74"
 }

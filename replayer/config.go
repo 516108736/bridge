@@ -15,7 +15,11 @@ type BridgeConfig struct {
 	ETHSpecialAddress common.Address
 
 	ETHConfirmationBlock uint64
+	QKCConfirmationBlock uint64
 	FeeRate              *big.Rat
 
 	QKCPrivateAddress string
 }
+
+//getShuttleFee(token string, amount int) => fee int
+//https://gist.github.com/ninjaahhh/e363dd881e34d2c8e698f4ccf656e8ee

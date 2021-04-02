@@ -1,29 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "https://github.com/QuarkChain/quarkchain-native-token/blob/master/contracts/NativeToken.sol";
 
-contract WrappedToken is ERC20, Ownable {
-    event Burn(address indexed _sender, bytes32 indexed _to, uint256 amount);
+pragma solidity ^0.6.0;
 
-    constructor(string memory name, string memory symbol)
-    public
-    ERC20(name, symbol)
-    {}
-
-    function burn(uint256 amount, bytes32 to) public {
-        _burn(_msgSender(), amount);
-
-        emit Burn(_msgSender(), to, amount);
+contract Burner is AllowNonDefaultNativeToken {
+    
+    event Burn(uint256 tokenId, uint256 amount, address source);
+    
+    function burn() public payable allowToken {
+        require(msg.value > 0);
+        uint256 tokenId = NativeToken.getCurrentToken();
+        emit Burn(tokenId, msg.value, msg.sender);
     }
-    function mint(address account, uint256 amount) public onlyOwner {
-        _mint(account, amount);
-    }
-}
-
-contract SCFToken is WrappedToken {
-    constructor() public WrappedToken("SCF333", "scf333") {
-
-    }
+    
 }

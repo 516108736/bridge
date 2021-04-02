@@ -1,5 +1,5 @@
-const scfToken = artifacts.require("SCFToken");
+const burner = artifacts.require("Burner");
 
 module.exports = function (deployer) {
-  deployer.deploy(scfToken);
+  deployer.deploy(burner);
 };

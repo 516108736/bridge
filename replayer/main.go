@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/rlp"
 	"io/ioutil"
 	"math/big"
 	"time"
@@ -15,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 
-	token "github.com/516108736/bridge/erc_token"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-redis/redis/v8"
 )
@@ -23,10 +26,6 @@ import (
 var (
 	wei = new(big.Int).Mul(new(big.Int).SetUint64(1000000000), new(big.Int).SetUint64(1000000000))
 	ctx = context.Background()
-
-	KeyLastHeight   = "key_last_height"
-	KeyNextSequence = "next_sequence"
-	KeyQueueTx      = "key_queue_tx"
 )
 
 func checkError(err error) {
@@ -42,11 +41,15 @@ type bridgeManager struct {
 	redis     *redis.Client
 
 	qkcPrivate *ecdsa.PrivateKey
+
+	KeyLastHeight   string
+	KeyNextSequence string
+	KeyQueueTx      string
 }
 
 func NewBridgeManager(config *BridgeConfig) *bridgeManager {
 	r := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "165.227.93.216:6379",
 		Password: "",
 		DB:       0,
 	})
@@ -60,11 +63,14 @@ func NewBridgeManager(config *BridgeConfig) *bridgeManager {
 	checkError(err)
 
 	bm := &bridgeManager{
-		config:     config,
-		ethClient:  ethClient,
-		qkcClient:  qkcClient,
-		redis:      r,
-		qkcPrivate: prvKey,
+		config:          config,
+		ethClient:       ethClient,
+		qkcClient:       qkcClient,
+		redis:           r,
+		qkcPrivate:      prvKey,
+		KeyLastHeight:   "eth_key_last_height",
+		KeyNextSequence: "eth_next_sequence",
+		KeyQueueTx:      "eth_key_queue_tx",
 	}
 	bm.InitAndVerify()
 
@@ -81,91 +87,133 @@ func (b *bridgeManager) InitAndVerify() {
 		FullShardKey: 0,
 	})
 	checkError(err)
-	b.redis.Set(ctx, KeyNextSequence, nonce, 0)
-	fmt.Println("addr", fromAddr.String(), "nonce", nonce)
+	b.redis.Set(ctx, b.KeyNextSequence, nonce, 0)
 }
 
 func (b *bridgeManager) EthMonitor() {
 	for true {
-		fmt.Println("准备检查TxQueue")
 		b.CheckEthMonitorTxQueue()
-		lastHeight, err := b.redis.Get(ctx, KeyLastHeight).Uint64()
+		lastHeight, err := b.redis.Get(ctx, b.KeyLastHeight).Uint64()
 		if err != nil {
 			lastHeight = 0
 		}
-		fmt.Println("准备去Load", lastHeight)
+		nonce, err := b.redis.Get(ctx, b.KeyNextSequence).Uint64()
+		checkError(err)
 		newLastHeight, monitorDatas := b.load(lastHeight)
-		fmt.Println("Load完毕", lastHeight, newLastHeight, len(monitorDatas))
 		if len(monitorDatas) != 0 {
-			txs, nonce := b.buildQKCTx(monitorDatas, 0)
-			jData, err := json.Marshal(txs)
+			txs, nonce := b.buildQKCTx(monitorDatas, nonce)
+			jData, err := rlp.EncodeToBytes(txs)
 			checkError(err)
-			b.redis.RPush(ctx, KeyQueueTx, string(jData))
-			b.redis.Set(ctx, KeyNextSequence, nonce, 0)
+			b.redis.RPush(ctx, b.KeyQueueTx, string(jData))
+			b.redis.Set(ctx, b.KeyNextSequence, nonce, 0)
 
 			//TODO notify to slack
+			b.relayQKCMsg(txs)
 		}
-		fmt.Println("newLastHeight", newLastHeight)
-		b.redis.Set(ctx, KeyLastHeight, newLastHeight, 0)
+		fmt.Println("newLastHeight", newLastHeight, lastHeight)
+		b.redis.Set(ctx, b.KeyLastHeight, newLastHeight, 0)
 		if newLastHeight == lastHeight {
 			time.Sleep(20 * time.Second)
 		}
 	}
 }
 
-func (b *bridgeManager) relayQKCMsg(txs []TxDetail) {
+func (b *bridgeManager) relayQKCMsg(txs []QKCTxDetail) {
 	for _, tx := range txs {
 		_, err := b.qkcClient.SendTransaction(tx.Tx)
+		checkError(err)
+		for true {
+			time.Sleep(1 * time.Second)
+			sb, err := cc.ByteToTransactionId(append(tx.TxHash.Bytes(), common.FromHex("0x00000000")...))
+
+			checkError(err)
+			rs, err := b.qkcClient.GetTransactionReceipt(sb)
+			if err != nil || rs.Result == nil {
+				continue
+			}
+			status, ok := rs.Result.(map[string]interface{})["status"]
+			if ok && status.(string) == "0x1" {
+				break
+			}
+		}
+		fmt.Println("succ tx", tx.TxHash.String())
 		checkError(err)
 	}
 	//TODO check status
 	return
 }
 
-type TxDetail struct {
+type QKCTxDetail struct {
 	Tx       *cc.EvmTransaction
 	TxHash   common.Hash
 	CreateAt time.Time
 }
 
-func (b *bridgeManager) buildQKCTx(dates []MonitoringData, nonce uint64) ([]TxDetail, uint64) {
-	rs := make([]TxDetail, 0)
+func (b *bridgeManager) GetNativeTokenIDInQkc(addr common.Address) uint64 {
+	for index, v := range b.config.ETHContract {
+		if bytes.Equal(addr.Bytes(), v.Bytes()) {
+			return b.config.QKCNativeContract[index]
+		}
+	}
+	panic("sb")
+}
+
+func (b *bridgeManager) buildQKCTx(dates []MonitoringData, nonce uint64) ([]QKCTxDetail, uint64) {
+	rs := make([]QKCTxDetail, 0)
 	for _, data := range dates {
+		nativeTokenOnQkc := b.GetNativeTokenIDInQkc(data.Contract)
+
 		tx, err := b.qkcClient.CreateTransaction(nonce, 0, &cc.QkcAddress{
-			Recipient:    data.To,
+			Recipient:    common.HexToAddress("0x514b430000000000000000000000000000000002"),
 			FullShardKey: 0,
-		}, data.Amount, 30000000, new(big.Int).SetUint64(1), nil)
+		}, new(big.Int), 3000000, new(big.Int).SetUint64(1000000000), cc.TokenIDEncode("QKC"), MintMsg(nativeTokenOnQkc, data.Amount))
 		checkError(err)
 		tx, err = cc.SignTx(tx, b.qkcPrivate)
 		checkError(err)
 		nonce++
-		rs = append(rs, TxDetail{
+		rs = append(rs, QKCTxDetail{
 			Tx:       tx,
-			TxHash:   tx.Hash(),
+			TxHash:   (&cc.Transaction{TxType: cc.EvmTx, EvmTx: tx}).Hash(),
+			CreateAt: time.Now(),
+		})
+
+		tx, err = b.qkcClient.CreateTransaction(nonce, 0, &cc.QkcAddress{
+			Recipient:    data.To,
+			FullShardKey: 0,
+		}, data.Amount, 30000, new(big.Int).SetUint64(1000000000), b.GetNativeTokenIDInQkc(data.Contract), nil)
+		checkError(err)
+		tx, err = cc.SignTx(tx, b.qkcPrivate)
+		checkError(err)
+		nonce++
+		rs = append(rs, QKCTxDetail{
+			Tx:       tx,
+			TxHash:   (&cc.Transaction{TxType: cc.EvmTx, EvmTx: tx}).Hash(),
 			CreateAt: time.Now(),
 		})
 	}
 	return rs, nonce
 }
 
+//499500000000000000
+//499500000000000000
+
 func (b *bridgeManager) load(lastHeight uint64) (uint64, []MonitoringData) {
 	bb, err := b.ethClient.BlockByNumber(ctx, nil)
 	checkError(err)
-	latestHeight := bb.NumberU64()
-
+	newHeight := bb.NumberU64()
+	newHeight -= b.config.ETHConfirmationBlock
 	// skip no new blocks generated
-	if lastHeight >= latestHeight-b.config.ETHConfirmationBlock {
-		fmt.Println("skip", lastHeight, latestHeight, b.config.ETHConfirmationBlock)
-		return latestHeight, nil
+	if lastHeight >= newHeight {
+		return newHeight, nil
 	}
 
-	fromBlock := latestHeight
+	fromBlock := newHeight
 	if lastHeight != 0 {
 		fromBlock = lastHeight + 1
 	}
 
-	toBlock := latestHeight
-	if fromBlock+100 < latestHeight {
+	toBlock := newHeight
+	if fromBlock+100 < newHeight {
 		toBlock = fromBlock + 100
 	}
 
@@ -185,42 +233,50 @@ type MonitoringData struct {
 	Amount      *big.Int
 	Fee         *big.Int
 	Contract    common.Address
+	nativeIndex int
 }
 
 func (b *bridgeManager) calFee(r *big.Int) *big.Int {
-	r = r.Mul(r, b.config.FeeRate.Num())
-	r = r.Div(r, b.config.FeeRate.Denom())
-	return r
+	rs := new(big.Int)
+	rs = rs.Mul(r, b.config.FeeRate.Num())
+	rs = rs.Div(rs, b.config.FeeRate.Denom())
+	return rs
 }
+
 func (b *bridgeManager) getMonitoringData(contract common.Address, from, to uint64) []MonitoringData {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{contract},
 		Topics: [][]common.Hash{
 			[]common.Hash{common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")},
 		},
+		FromBlock: new(big.Int).SetUint64(from),
+		ToBlock:   new(big.Int).SetUint64(to),
 	}
 
 	rs := make([]MonitoringData, 0)
 	logs, err := b.ethClient.FilterLogs(ctx, query)
 	checkError(err)
 	for _, log := range logs {
+		if !bytes.Equal(common.BytesToAddress(log.Topics[2].Bytes()).Bytes(), common.HexToAddress("0x9317D5F30ff07ff091b2cC6fA170Ca418ca14380").Bytes()) {
+			continue
+		}
 
 		requestd := new(big.Int).SetBytes(log.Data)
 		fee := b.calFee(requestd)
 		amount := new(big.Int).Sub(requestd, fee)
-		rs = append(rs, MonitoringData{
 
+		rs = append(rs, MonitoringData{
 			BlockNumber: log.BlockNumber,
 			TxHash:      log.TxHash,
-			Sender:      common.Address{}, //TODO
-			To:          common.Address{}, //TODO
+			Sender:      common.BytesToAddress(log.Topics[1].Bytes()), //TODO
+			To:          common.BytesToAddress(log.Topics[1].Bytes()), //TODO
 			Request:     requestd,
 			Amount:      amount,
 			Fee:         fee,
 			Contract:    log.Address,
 		})
 	}
-	fmt.Println("getMonitoringData contract", contract, from, to, "res", len(rs))
+	fmt.Println("getMonitoringData contract", from, to, "res", len(rs))
 	return rs
 }
 func (b *bridgeManager) CheckEthMonitorTxQueue() {
@@ -232,21 +288,24 @@ func (b *bridgeManager) CheckEthMonitorTxQueue() {
 	}
 
 	//ts := time.Now()
-	len := b.redis.LLen(ctx, KeyQueueTx).Val()
-	if len == 0 {
+	sb := b.redis.LLen(ctx, b.KeyQueueTx).Val()
+	if sb == 0 {
 		return
 	}
 
-	relayDats := b.redis.LRange(ctx, KeyQueueTx, 0, int64Min(10, len))
+	relayDats := b.redis.LRange(ctx, b.KeyQueueTx, 0, int64Min(3, sb))
 
 	targetGasPrice, err := b.ethClient.SuggestGasPrice(ctx)
 	checkError(err)
 	targetGasPrice = targetGasPrice.Add(targetGasPrice, targetGasPrice.Div(targetGasPrice, new(big.Int).SetUint64(5))) // x *1.2
-
-	relayDats.Val()
-}
-
-func (b *bridgeManager) QKCMonitor() {
+	for index, v := range relayDats.Val() {
+		mm := new([]QKCTxDetail)
+		err = rlp.DecodeBytes([]byte(v), mm)
+		checkError(err)
+		b.relayQKCMsg(*mm)
+		b.redis.LSet(ctx, b.KeyQueueTx, int64(index), "DELETE")
+	}
+	b.redis.LRem(ctx, b.KeyQueueTx, 3, "DELETE")
 
 }
 
@@ -258,14 +317,208 @@ func readLocalConfig(path string) *BridgeConfig {
 	checkError(err)
 	return c
 }
-func ma1in() {
-
+func main() {
 	config := readLocalConfig("./config.json")
 	manager := NewBridgeManager(config)
-
 	manager.EthMonitor()
 
 	time.Sleep(1000000 * time.Second)
+}
+
+type TerraManager struct {
+	config    *BridgeConfig
+	ethClient *ethclient.Client
+	qkcClient *cc.Client
+	redis     *redis.Client
+
+	qkcPrivate *ecdsa.PrivateKey
+
+	KeyLastHeight   string
+	KeyNextSequence string
+	KeyQueueTx      string
+}
+
+func NewTerr(config *BridgeConfig) *TerraManager {
+	return &TerraManager{
+		config:          nil,
+		ethClient:       nil,
+		qkcClient:       nil,
+		redis:           nil,
+		qkcPrivate:      nil,
+		KeyLastHeight:   "terr_key_last_height",
+		KeyNextSequence: "terr_next_sequence",
+		KeyQueueTx:      "terr_key_queue_tx",
+	}
+}
+
+func (t *TerraManager) CheckQKCMonitorTxQueue() {
+	int64Min := func(a, b int64) int64 {
+		if a < b {
+			return a
+		}
+		return b
+	}
+
+	//ts := time.Now()
+	sb := t.redis.LLen(ctx, t.KeyQueueTx).Val()
+	if sb == 0 {
+		return
+	}
+
+	relayDats := t.redis.LRange(ctx, t.KeyQueueTx, 0, int64Min(3, sb))
+	targetGasPrice, err := t.ethClient.SuggestGasPrice(ctx)
+	checkError(err)
+	targetGasPrice = targetGasPrice.Add(targetGasPrice, targetGasPrice.Div(targetGasPrice, new(big.Int).SetUint64(5))) // x *1.2
+	for index, v := range relayDats.Val() {
+		mm := new(ETHTxDetail)
+		err = rlp.DecodeBytes([]byte(v), mm)
+		checkError(err)
+
+		if mm.Time.Second()-time.Now().Second() > 1000*60 {
+			mm.Tx = t.makeEthTx(mm.toAddr, *(mm.Tx.To()), increaseGasPrice(mm.Tx.GasPrice()), mm.value)
+		}
+
+		t.redis.LSet(ctx, t.KeyQueueTx, int64(index), "DELETE")
+	}
+	t.redis.LRem(ctx, t.KeyQueueTx, 3, "DELETE")
+}
+
+func increaseGasPrice(data *big.Int) *big.Int {
+	rs := new(big.Int).Set(data)
+	rs = new(big.Int).Add(rs, new(big.Int).Div(data, new(big.Int).SetUint64(2)))
+	return rs
+}
+
+func (t *TerraManager) relayerETH(detail *ETHTxDetail) {
+	err := t.ethClient.SendTransaction(ctx, detail.Tx)
+	checkError(err)
+	for true {
+		time.Sleep(1 * time.Second)
+		rs, err := t.ethClient.TransactionReceipt(ctx, detail.TxHash)
+		checkError(err)
+		if rs.Status == 1 {
+			break
+		}
+		fmt.Println("succc eth", detail.TxHash.String())
+	}
+}
+
+type ETHTxDetail struct {
+	TxHash common.Hash
+	Tx     *types.Transaction
+	Time   time.Time
+	toAddr common.Address
+	value  *big.Int
+}
+
+func (t *TerraManager) load(lastHeight uint64) (uint64, []*MonitoringData) {
+	bb, err := t.qkcClient.GetMinorBlockByHeight(0, nil)
+	checkError(err)
+	newHeight := new(big.Int).SetBytes(common.FromHex(bb.Result.(string))).Uint64()
+	newHeight -= t.config.ETHConfirmationBlock
+	// skip no new blocks generated
+	if lastHeight >= newHeight {
+		return newHeight, nil
+	}
+
+	fromBlock := newHeight
+	if lastHeight != 0 {
+		fromBlock = lastHeight + 1
+	}
+
+	toBlock := newHeight
+	if fromBlock+100 < newHeight {
+		toBlock = fromBlock + 100
+	}
+
+	rs := make([]*MonitoringData, 0)
+	for index := fromBlock; index <= toBlock; index++ {
+
+	}
+
+	return toBlock, rs
+}
+
+func (t *TerraManager) makeEthTx(toAddress, tokenAddress common.Address, gasPrice *big.Int, amount *big.Int) *types.Transaction {
+	fromAddress := crypto.PubkeyToAddress(t.qkcPrivate.PublicKey)
+	nonce, err := t.ethClient.PendingNonceAt(context.Background(), fromAddress)
+	checkError(err)
+	value := big.NewInt(0) // in wei (0 eth)
+	if gasPrice == nil {
+		gasPrice, err = t.ethClient.SuggestGasPrice(context.Background())
+		checkError(err)
+	}
+
+	transferFnSignature := []byte("transfer(address,uint256)")
+	hash := sha3.NewKeccak256()
+	hash.Write(transferFnSignature)
+	methodID := hash.Sum(nil)[:4]
+	fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
+
+	paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+	fmt.Println(hexutil.Encode(paddedAddress)) // 0x0000000000000000000000004592d8f8d7b001e72cb26a73e4fa1806a51ac79d
+
+	paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
+	fmt.Println(hexutil.Encode(paddedAmount)) // 0x00000000000000000000000000000000000000000000003635c9adc5dea00000
+
+	var data []byte
+	data = append(data, methodID...)
+	data = append(data, paddedAddress...)
+	data = append(data, paddedAmount...)
+	gasLimit, err := t.ethClient.EstimateGas(context.Background(), ethereum.CallMsg{
+		To:   &toAddress,
+		Data: data,
+	})
+	checkError(err)
+
+	tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+
+	chainID, err := t.ethClient.NetworkID(context.Background())
+	checkError(err)
+
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), t.qkcPrivate)
+	checkError(err)
+	return signedTx
+
+}
+
+func (t *TerraManager) buildEthTx(datas []*MonitoringData) []*ETHTxDetail {
+	txs := make([]*ETHTxDetail, 0)
+	for _, v := range datas {
+		tx := t.makeEthTx(v.To, v.Contract, nil, v.Amount)
+		detail := &ETHTxDetail{
+			TxHash: tx.Hash(),
+			Tx:     tx,
+			Time:   time.Now(),
+		}
+		bs, err := rlp.EncodeToBytes(detail)
+		checkError(err)
+		t.redis.LPush(ctx, t.KeyQueueTx, string(bs))
+		txs = append(txs, detail)
+	}
+	return txs
+}
+func (t *TerraManager) QKCMonitor() {
+	for true {
+		t.CheckQKCMonitorTxQueue()
+		lastHeight, err := t.redis.Get(ctx, t.KeyLastHeight).Uint64()
+		if err != nil {
+			lastHeight = 0
+		}
+		newLastHeight, monitorDatas := t.load(lastHeight)
+		if len(monitorDatas) != 0 {
+			txs := t.buildEthTx(monitorDatas)
+
+			for _, v := range txs {
+				t.relayerETH(v)
+			}
+		}
+		fmt.Println("newLastHeight", newLastHeight, lastHeight)
+		t.redis.Set(ctx, t.KeyQueueTx, newLastHeight, 0)
+		if newLastHeight == lastHeight {
+			time.Sleep(20 * time.Second)
+		}
+	}
 }
 
 //
@@ -361,7 +614,16 @@ func ma1in() {
 //	rs = append(rs, common.BigToHash(value).Bytes()...)
 //	return rs
 //}
-//
+
+func MintMsg(addr uint64, value *big.Int) []byte {
+	rs := make([]byte, 0)
+	rs = append(rs, common.FromHex("0x0f2dc31a")...)
+	rs = append(rs, common.BigToHash(new(big.Int).SetUint64(addr)).Bytes()...)
+	rs = append(rs, common.BigToHash(value).Bytes()...)
+	return rs
+
+}
+
 //func makeTransferMsg(addr common.Address, value *big.Int) []byte {
 //	rs := make([]byte, 0)
 //	rs = append(rs, common.FromHex("0xa9059cbb000000000000000000000000")...)
@@ -416,48 +678,48 @@ func ma1in() {
 //
 //	fmt.Println("QKC主网 transfer addr2->addr1", "from", from.String(), "to", addr.String(), "value", value, "0x"+common.Bytes2Hex(txid))
 //}
-
-func main() {
-	config := readLocalConfig("./config")
-	b := NewBridgeManager(config)
-
-	instance, err := token.NewErcToken(b.config.ETHContract[0], b.ethClient)
-	checkError(err)
-
-	name, err := instance.Name(&bind.CallOpts{})
-	checkError(err)
-	fmt.Printf("币种名字: %s\n", name)
-
-	fmt.Println("准备测试", "ETH => QKC")
-
-	auth := bind.NewKeyedTransactor(b.qkcPrivate)
-
-	toMintAddr := common.HexToAddress("0xFf4f755E64fb5975f83Aa516adC6A3D97Ee19F12")
-	toMintValue := new(big.Int).Mul(new(big.Int).SetUint64(6), wei)
-
-	tx, err := instance.Mint(auth, toMintAddr, toMintValue)
-	fmt.Println("ropsten网络 mint addr2", "addr", toMintAddr.String(), "value", toMintValue.String(), "tx", tx.Hash().String())
-	if err != nil {
-		panic(err)
-	}
-	//
-	//Sleep(tx.Hash())
-	//fmt.Println("初始化完成")
-	//time.Sleep(100000000 * time.Second)
-	//
-	//pr, err = crypto.ToECDSA(common.FromHex(pri2))
-	//auth = bind.NewKeyedTransactor(pr)
-	//toTransferAddr := common.HexToAddress(addr1)
-	//toTransferValue := new(big.Int).Mul(new(big.Int).SetUint64(6), wei)
-	//tx, err = instance.Transfer(auth, toTransferAddr, toTransferValue)
-	//fmt.Println("ropsten网络 tranfer addr2->addr1", "from", crypto.PubkeyToAddress(pr.PublicKey).String(), "to", toTransferAddr.String(), "value", toMintValue, "tx", tx.Hash().String())
-	//if err != nil {
-	//	panic(err)
-	//}
-	//Sleep(tx.Hash())
-	//
-	//fmt.Println("准备测试 QKC => ETH")
-	//toTransferValue = new(big.Int).Mul(new(big.Int).SetUint64(1), wei)
-	//testTransferTokenOnQkc(toTransferAddr, toTransferValue)
-	//time.Sleep(1000 * time.Second)
-}
+//
+//func main() {
+//	config := readLocalConfig("./config.json")
+//	b := NewBridgeManager(config)
+//
+//	instance, err := token.NewErcToken(b.config.ETHContract[0], b.ethClient)
+//	checkError(err)
+//
+//	name, err := instance.Name(&bind.CallOpts{})
+//	checkError(err)
+//	fmt.Printf("币种名字: %s\n", name)
+//
+//	fmt.Println("准备测试", "ETH => QKC")
+//
+//	auth := bind.NewKeyedTransactor(b.qkcPrivate)
+//
+//	toMintAddr := common.HexToAddress("0xFf4f755E64fb5975f83Aa516adC6A3D97Ee19F12")
+//	toMintValue := new(big.Int).Mul(new(big.Int).SetUint64(6), wei)
+//
+//	tx, err := instance.Mint(auth, toMintAddr, toMintValue)
+//	fmt.Println("ropsten网络 mint addr2", "addr", toMintAddr.String(), "value", toMintValue.String(), "tx", tx.Hash().String())
+//	if err != nil {
+//		panic(err)
+//	}
+//	//
+//	//Sleep(tx.Hash())
+//	//fmt.Println("初始化完成")
+//	//time.Sleep(100000000 * time.Second)
+//	//
+//	//pr, err = crypto.ToECDSA(common.FromHex(pri2))
+//	//auth = bind.NewKeyedTransactor(pr)
+//	//toTransferAddr := common.HexToAddress(addr1)
+//	//toTransferValue := new(big.Int).Mul(new(big.Int).SetUint64(6), wei)
+//	//tx, err = instance.Transfer(auth, toTransferAddr, toTransferValue)
+//	//fmt.Println("ropsten网络 tranfer addr2->addr1", "from", crypto.PubkeyToAddress(pr.PublicKey).String(), "to", toTransferAddr.String(), "value", toMintValue, "tx", tx.Hash().String())
+//	//if err != nil {
+//	//	panic(err)
+//	//}
+//	//Sleep(tx.Hash())
+//	//
+//	//fmt.Println("准备测试 QKC => ETH")
+//	//toTransferValue = new(big.Int).Mul(new(big.Int).SetUint64(1), wei)
+//	//testTransferTokenOnQkc(toTransferAddr, toTransferValue)
+//	//time.Sleep(1000 * time.Second)
+//}
