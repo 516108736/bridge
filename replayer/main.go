@@ -319,10 +319,37 @@ func readLocalConfig(path string) *BridgeConfig {
 }
 func main() {
 	config := readLocalConfig("./config.json")
-	manager := NewBridgeManager(config)
-	manager.EthMonitor()
+	//manager := NewBridgeManager(config)
+	//manager.EthMonitor()
+
+	t := NewTerr(config)
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{common.HexToAddress("0xF599cD040de614365B93479ed784e9b144E6b52B")},
+		Topics: [][]common.Hash{
+			[]common.Hash{common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")},
+		},
+		FromBlock: new(big.Int).SetUint64(187671),
+		ToBlock:   new(big.Int).SetUint64(187678),
+	}
+	t.qkcClient.GetLog(0, query)
+	t.QKCMonitor()
 
 	time.Sleep(1000000 * time.Second)
+}
+
+func main1() {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{common.HexToAddress("0xF599cD040de614365B93479ed784e9b144E6b52B")},
+		Topics: [][]common.Hash{
+			[]common.Hash{common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")},
+		},
+		FromBlock: new(big.Int).SetUint64(1),
+		ToBlock:   new(big.Int).SetUint64(10000000000),
+	}
+	data, err := json.Marshal(query)
+	fmt.Println("er", err)
+	fmt.Println("data", string(data))
 }
 
 type TerraManager struct {
@@ -339,12 +366,25 @@ type TerraManager struct {
 }
 
 func NewTerr(config *BridgeConfig) *TerraManager {
+	r := redis.NewClient(&redis.Options{
+		Addr:     "165.227.93.216:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	ethClient, err := ethclient.Dial(config.ETHInfuraProjectID)
+	checkError(err)
+
+	qkcClient := cc.NewClient(config.QKCRpc)
+
+	prvKey, err := crypto.ToECDSA(common.FromHex(config.QKCPrivateAddress))
+	checkError(err)
 	return &TerraManager{
-		config:          nil,
-		ethClient:       nil,
-		qkcClient:       nil,
-		redis:           nil,
-		qkcPrivate:      nil,
+		config:          config,
+		ethClient:       ethClient,
+		qkcClient:       qkcClient,
+		redis:           r,
+		qkcPrivate:      prvKey,
 		KeyLastHeight:   "terr_key_last_height",
 		KeyNextSequence: "terr_next_sequence",
 		KeyQueueTx:      "terr_key_queue_tx",
@@ -362,6 +402,7 @@ func (t *TerraManager) CheckQKCMonitorTxQueue() {
 	//ts := time.Now()
 	sb := t.redis.LLen(ctx, t.KeyQueueTx).Val()
 	if sb == 0 {
+		fmt.Println("Llll==0")
 		return
 	}
 
@@ -385,7 +426,7 @@ func (t *TerraManager) CheckQKCMonitorTxQueue() {
 
 func increaseGasPrice(data *big.Int) *big.Int {
 	rs := new(big.Int).Set(data)
-	rs = new(big.Int).Add(rs, new(big.Int).Div(data, new(big.Int).SetUint64(2)))
+	rs = new(big.Int).Add(rs, new(big.Int).Div(data, new(big.Int).SetUint64(5))) // x *1.2
 	return rs
 }
 
@@ -413,8 +454,9 @@ type ETHTxDetail struct {
 
 func (t *TerraManager) load(lastHeight uint64) (uint64, []*MonitoringData) {
 	bb, err := t.qkcClient.GetMinorBlockByHeight(0, nil)
+	fmt.Println("err", err, bb.Result)
 	checkError(err)
-	newHeight := new(big.Int).SetBytes(common.FromHex(bb.Result.(string))).Uint64()
+	newHeight := new(big.Int).SetBytes(common.FromHex(bb.Result.(map[string]interface{})["height"].(string))).Uint64()
 	newHeight -= t.config.ETHConfirmationBlock
 	// skip no new blocks generated
 	if lastHeight >= newHeight {
@@ -431,6 +473,8 @@ func (t *TerraManager) load(lastHeight uint64) (uint64, []*MonitoringData) {
 		toBlock = fromBlock + 100
 	}
 
+	fmt.Println("dddddddddddddddd", fromBlock, toBlock)
+	panic("sb")
 	rs := make([]*MonitoringData, 0)
 	for index := fromBlock; index <= toBlock; index++ {
 
@@ -503,20 +547,22 @@ func (t *TerraManager) QKCMonitor() {
 		t.CheckQKCMonitorTxQueue()
 		lastHeight, err := t.redis.Get(ctx, t.KeyLastHeight).Uint64()
 		if err != nil {
+			fmt.Println("redis get err", err)
 			lastHeight = 0
 		}
+		fmt.Println("lastHeight", lastHeight, "ready to load")
 		newLastHeight, monitorDatas := t.load(lastHeight)
+		fmt.Println("load end", newLastHeight, "len(data)", len(monitorDatas))
 		if len(monitorDatas) != 0 {
 			txs := t.buildEthTx(monitorDatas)
-
 			for _, v := range txs {
 				t.relayerETH(v)
 			}
 		}
 		fmt.Println("newLastHeight", newLastHeight, lastHeight)
-		t.redis.Set(ctx, t.KeyQueueTx, newLastHeight, 0)
+		t.redis.Set(ctx, t.KeyLastHeight, newLastHeight, 0)
 		if newLastHeight == lastHeight {
-			time.Sleep(20 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 	}
 }
